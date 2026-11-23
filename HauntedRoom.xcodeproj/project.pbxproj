@@ -1,0 +1,139 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 54;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000020 /* HauntedRoomApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* HauntedRoomApp.swift */; };
+		A10000000000000000000021 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* GameState.swift */; };
+		A10000000000000000000022 /* GameEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* GameEngine.swift */; };
+		A10000000000000000000023 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* GameScene.swift */; };
+		A10000000000000000000024 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* GameView.swift */; };
+		A10000000000000000000025 /* AdminPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* AdminPanelView.swift */; };
+		A10000000000000000000026 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* Assets.xcassets */; };
+		A10000000000000000000027 /* GameEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* GameEngineTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A10000000000000000000049 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000003 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000001;
+			remoteInfo = HauntedRoom;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A10000000000000000000006 /* HauntedRoom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HauntedRoom.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000007 /* HauntedRoomTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HauntedRoomTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000010 /* HauntedRoomApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HauntedRoomApp.swift; sourceTree = "<group>"; };
+		A10000000000000000000011 /* GameState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameState.swift; sourceTree = "<group>"; };
+		A10000000000000000000012 /* GameEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameEngine.swift; sourceTree = "<group>"; };
+		A10000000000000000000013 /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
+		A10000000000000000000014 /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
+		A10000000000000000000015 /* AdminPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminPanelView.swift; sourceTree = "<group>"; };
+		A10000000000000000000016 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A10000000000000000000017 /* GameEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameEngineTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000031 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A10000000000000000000034 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000000000000000000004 = {isa = PBXGroup; children = (A10000000000000000000008 /* HauntedRoom */, A1000000000000000000000D /* HauntedRoomTests */, A10000000000000000000005 /* Products */); sourceTree = "<group>"; };
+		A10000000000000000000005 /* Products */ = {isa = PBXGroup; children = (A10000000000000000000006 /* HauntedRoom.app */, A10000000000000000000007 /* HauntedRoomTests.xctest */); name = Products; sourceTree = "<group>"; };
+		A10000000000000000000008 /* HauntedRoom */ = {isa = PBXGroup; children = (A10000000000000000000010 /* HauntedRoomApp.swift */, A10000000000000000000009 /* Core */, A1000000000000000000000A /* Scene */, A1000000000000000000000B /* UI */, A1000000000000000000000C /* Resources */); path = HauntedRoom; sourceTree = "<group>"; };
+		A10000000000000000000009 /* Core */ = {isa = PBXGroup; children = (A10000000000000000000011 /* GameState.swift */, A10000000000000000000012 /* GameEngine.swift */); path = Core; sourceTree = "<group>"; };
+		A1000000000000000000000A /* Scene */ = {isa = PBXGroup; children = (A10000000000000000000013 /* GameScene.swift */); path = Scene; sourceTree = "<group>"; };
+		A1000000000000000000000B /* UI */ = {isa = PBXGroup; children = (A10000000000000000000014 /* GameView.swift */, A10000000000000000000015 /* AdminPanelView.swift */); path = UI; sourceTree = "<group>"; };
+		A1000000000000000000000C /* Resources */ = {isa = PBXGroup; children = (A10000000000000000000016 /* Assets.xcassets */); path = Resources; sourceTree = "<group>"; };
+		A1000000000000000000000D /* HauntedRoomTests */ = {isa = PBXGroup; children = (A10000000000000000000017 /* GameEngineTests.swift */); path = HauntedRoomTests; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000000000000000000001 /* HauntedRoom */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000041 /* Build configuration list for PBXNativeTarget "HauntedRoom" */;
+			buildPhases = (A10000000000000000000030 /* Sources */, A10000000000000000000031 /* Frameworks */, A10000000000000000000032 /* Resources */);
+			buildRules = ();
+			dependencies = ();
+			name = HauntedRoom;
+			productName = HauntedRoom;
+			productReference = A10000000000000000000006 /* HauntedRoom.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A10000000000000000000002 /* HauntedRoomTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000042 /* Build configuration list for PBXNativeTarget "HauntedRoomTests" */;
+			buildPhases = (A10000000000000000000033 /* Sources */, A10000000000000000000034 /* Frameworks */, A10000000000000000000035 /* Resources */);
+			buildRules = ();
+			dependencies = (A1000000000000000000004A /* PBXTargetDependency */);
+			name = HauntedRoomTests;
+			productName = HauntedRoomTests;
+			productReference = A10000000000000000000007 /* HauntedRoomTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000000000000000000003 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A10000000000000000000001 = { CreatedOnToolsVersion = 15.0; };
+					A10000000000000000000002 = { CreatedOnToolsVersion = 15.0; TestTargetID = A10000000000000000000001; };
+				};
+			};
+			buildConfigurationList = A10000000000000000000040 /* Build configuration list for PBXProject "HauntedRoom" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base, "zh-Hans");
+			mainGroup = A10000000000000000000004;
+			productRefGroup = A10000000000000000000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (A10000000000000000000001 /* HauntedRoom */, A10000000000000000000002 /* HauntedRoomTests */);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000032 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000026 /* Assets.xcassets in Resources */); runOnlyForDeploymentPostprocessing = 0; };
+		A10000000000000000000035 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000000000000000000030 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000020 /* HauntedRoomApp.swift in Sources */, A10000000000000000000021 /* GameState.swift in Sources */, A10000000000000000000022 /* GameEngine.swift in Sources */, A10000000000000000000023 /* GameScene.swift in Sources */, A10000000000000000000024 /* GameView.swift in Sources */, A10000000000000000000025 /* AdminPanelView.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		A10000000000000000000033 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000027 /* GameEngineTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A1000000000000000000004A /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A10000000000000000000001 /* HauntedRoom */; targetProxy = A10000000000000000000049 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A10000000000000000000043 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_STRICT_OBJC_MSGSEND = YES; ENABLE_TESTABILITY = YES; GCC_C_LANGUAGE_STANDARD = gnu11; GCC_DYNAMIC_NO_PIC = NO; GCC_OPTIMIZATION_LEVEL = 0; GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1", "$(inherited)"); IPHONEOS_DEPLOYMENT_TARGET = 15.0; MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE; MTL_FAST_MATH = YES; ONLY_ACTIVE_ARCH = YES; SDKROOT = iphoneos; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Debug; };
+		A10000000000000000000044 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = YES; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; ENABLE_NS_ASSERTIONS = NO; ENABLE_STRICT_OBJC_MSGSEND = YES; GCC_C_LANGUAGE_STANDARD = gnu11; IPHONEOS_DEPLOYMENT_TARGET = 15.0; MTL_ENABLE_DEBUG_INFO = NO; MTL_FAST_MATH = YES; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; VALIDATE_PRODUCT = YES; }; name = Release; };
+		A10000000000000000000045 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_PREVIEWS = YES; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "守夜小屋"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait; IPHONEOS_DEPLOYMENT_TARGET = 15.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.example.HauntedRoom; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = 1; }; name = Debug; };
+		A10000000000000000000046 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_PREVIEWS = YES; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "守夜小屋"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait; IPHONEOS_DEPLOYMENT_TARGET = 15.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.example.HauntedRoom; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = 1; }; name = Release; };
+		A10000000000000000000047 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 15.0; PRODUCT_BUNDLE_IDENTIFIER = com.example.HauntedRoomTests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HauntedRoom.app/HauntedRoom"; }; name = Debug; };
+		A10000000000000000000048 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 15.0; PRODUCT_BUNDLE_IDENTIFIER = com.example.HauntedRoomTests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HauntedRoom.app/HauntedRoom"; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000000000000000000040 /* Build configuration list for PBXProject "HauntedRoom" */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000043 /* Debug */, A10000000000000000000044 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A10000000000000000000041 /* Build configuration list for PBXNativeTarget "HauntedRoom" */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000045 /* Debug */, A10000000000000000000046 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A10000000000000000000042 /* Build configuration list for PBXNativeTarget "HauntedRoomTests" */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000047 /* Debug */, A10000000000000000000048 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = A10000000000000000000003 /* Project object */;
+}
