@@ -43,11 +43,12 @@ final class GameEngineTests: XCTestCase {
         engine.setInfiniteCoins(true)
         engine.advance(dt: 1.5)
         XCTAssertEqual(engine.state.doorHealth, 212)
+        let coinsBeforeUpgrade = engine.state.coins
 
         XCTAssertTrue(engine.upgradeDoor())
         XCTAssertEqual(engine.state.doorLevel, 2)
         XCTAssertEqual(engine.state.doorHealth, 340)
-        XCTAssertEqual(engine.state.coins, engine.config.startingCoins)
+        XCTAssertEqual(engine.state.coins, coinsBeforeUpgrade)
     }
 
     func testTurretAndGhostFollowTheirAttackCooldowns() {
