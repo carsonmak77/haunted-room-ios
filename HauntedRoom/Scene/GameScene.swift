@@ -50,7 +50,7 @@ final class GameScene: SKScene {
         synchronizeNodes()
     }
 
-    override func update(currentTime: TimeInterval) {
+    override func update(_ currentTime: TimeInterval) {
         defer { lastUpdateTime = currentTime }
         if lastUpdateTime > 0 {
             let delta = max(0, min(currentTime - lastUpdateTime, 0.1))
