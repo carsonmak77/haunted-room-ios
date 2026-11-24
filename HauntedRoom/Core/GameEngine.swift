@@ -12,14 +12,14 @@ final class GameEngine: ObservableObject {
         state = GameState(config: config)
     }
 
-    var level: Int { state.level }
-    var waveNumber: Int { state.waveIndex + 1 }
-    var totalWavesPerLevel: Int { config.wavesPerLevel }
-    var incomePerSecond: Int { config.bedIncome(bedLevel: state.bedLevel, level: state.level) }
-    var doorMaxHealth: Int { config.doorMaxHealth(doorLevel: state.doorLevel, level: state.level) }
-    var maxBedLevel: Int { config.maxBedLevel(level: state.level) }
-    var maxDoorLevel: Int { config.maxDoorLevel(level: state.level) }
-    var maxTurretLevel: Int { config.maxTurretLevel(level: state.level) }
+    var waveNumber: Int { min(state.waveIndex + 1, config.maxWaves) }
+    var monsterLevel: Int { max(0, waveNumber - 1) }
+    var maxWaves: Int { config.maxWaves }
+    var incomePerSecond: Int { config.bedIncome(bedLevel: state.bedLevel) }
+    var doorMaxHealth: Int { config.doorMaxHealth(doorLevel: state.doorLevel, wave: waveNumber) }
+    var maxBedLevel: Int { config.maxUpgradeLevel }
+    var maxDoorLevel: Int { config.maxUpgradeLevel }
+    var maxTurretLevel: Int { config.maxUpgradeLevel }
 
     var remainingEnemies: Int { state.enemies.count + state.enemiesRemainingToSpawn }
     var waveEnemyTotal: Int { state.waveKinds.count }
@@ -35,9 +35,10 @@ final class GameEngine: ObservableObject {
     var totalTurretDPS: Int {
         state.turrets.indices.reduce(0) { total, slot in
             guard let turret = state.turrets[slot] else { return total }
-            let damage = Double(config.turretDamage(kind: turret.kind, level: turret.level, playerLevel: state.level))
+            let damage = Double(config.turretDamage(kind: turret.kind, level: turret.level, wave: waveNumber))
             let interval = config.turretAttackInterval(kind: turret.kind, level: turret.level)
-            return total + Int((damage / interval).rounded())
+            let dps = Int(min(damage / interval, Double(config.maximumCoins)))
+            return min(total + dps, config.maximumCoins)
         }
     }
 
@@ -69,7 +70,7 @@ final class GameEngine: ObservableObject {
 
     func turretDamage(at slot: Int) -> Int {
         guard let turret = state.turrets[slot] else { return 0 }
-        return config.turretDamage(kind: turret.kind, level: turret.level, playerLevel: state.level)
+        return config.turretDamage(kind: turret.kind, level: turret.level, wave: waveNumber)
     }
 
     func canBuildTurret(at slot: Int) -> Bool {
@@ -222,7 +223,7 @@ final class GameEngine: ObservableObject {
 
     private func earnIncome(dt: Double) {
         state.incomeRemainder += Double(incomePerSecond) * dt
-        let earned = Int(state.incomeRemainder)
+        let earned = Int(min(state.incomeRemainder, 1_000_000_000_000_000))
         guard earned > 0 else { return }
         state.incomeRemainder -= Double(earned)
         addCoins(earned)
@@ -234,13 +235,13 @@ final class GameEngine: ObservableObject {
     }
 
     private func beginWave() {
-        let kinds = config.enemyKinds(level: state.level, wave: waveNumber)
+        let kinds = config.enemyKinds(wave: waveNumber)
         state.waveKinds = kinds
         state.enemies.removeAll()
         state.enemiesRemainingToSpawn = kinds.count
         state.spawnCooldown = 0
         state.intermissionRemaining = 0
-        events.append(.waveStarted(level: state.level, wave: waveNumber))
+        events.append(.waveStarted(wave: waveNumber))
         updateSpawning(dt: 0)
     }
 
@@ -262,13 +263,13 @@ final class GameEngine: ObservableObject {
         state.enemiesRemainingToSpawn -= 1
         state.spawnCooldown += config.enemySpawnInterval
 
-        let health = config.enemyHealth(kind: kind, level: state.level, wave: waveNumber)
+        let health = config.enemyHealth(kind: kind, wave: waveNumber)
         let enemy = EnemyState(
             id: state.nextEnemyID,
             kind: kind,
             health: health,
             maxHealth: health,
-            attackCooldown: config.enemyAttackInterval(kind: kind, level: state.level, wave: waveNumber)
+            attackCooldown: config.enemyAttackInterval(kind: kind, wave: waveNumber)
         )
         state.nextEnemyID += 1
         state.enemies.append(enemy)
@@ -287,7 +288,7 @@ final class GameEngine: ObservableObject {
             var shots = 0
             while turret.cooldown <= 0, !state.enemies.isEmpty, shots < 16 {
                 turret.cooldown += config.turretAttackInterval(kind: turret.kind, level: turret.level)
-                fire(slot: slot, damage: config.turretDamage(kind: turret.kind, level: turret.level, playerLevel: state.level))
+                fire(slot: slot, damage: config.turretDamage(kind: turret.kind, level: turret.level, wave: waveNumber))
                 shots += 1
             }
             state.turrets[slot] = turret
@@ -313,8 +314,8 @@ final class GameEngine: ObservableObject {
         enemy.attackCooldown -= dt
         var attacks = 0
         while enemy.attackCooldown <= 0, state.phase == .playing, attacks < 16 {
-            enemy.attackCooldown += config.enemyAttackInterval(kind: enemy.kind, level: state.level, wave: waveNumber)
-            applyDoorDamage(config.enemyDamage(kind: enemy.kind, level: state.level, wave: waveNumber))
+            enemy.attackCooldown += config.enemyAttackInterval(kind: enemy.kind, wave: waveNumber)
+            applyDoorDamage(config.enemyDamage(kind: enemy.kind, wave: waveNumber))
             attacks += 1
         }
         if !state.enemies.isEmpty {
@@ -340,22 +341,16 @@ final class GameEngine: ObservableObject {
               state.intermissionRemaining == 0,
               !state.waveKinds.isEmpty else { return }
 
-        let clearedLevel = state.level
         let clearedWave = waveNumber
-        let reward = config.waveReward(level: clearedLevel, wave: clearedWave)
+        let reward = config.waveReward(wave: clearedWave)
         addCoins(reward)
-        events.append(.waveCleared(level: clearedLevel, wave: clearedWave, reward: reward))
+        events.append(.waveCleared(wave: clearedWave, reward: reward))
 
-        if clearedWave >= config.wavesPerLevel {
-            state.level += 1
-            state.waveIndex = 0
-            let healed = state.doorHealth + doorMaxHealth / 4
-            state.doorHealth = min(doorMaxHealth, healed)
-            state.intermissionRemaining = config.levelUpDuration
-            events.append(.levelUp(state.level))
-        } else {
+        if clearedWave < config.maxWaves {
             state.waveIndex += 1
-            state.intermissionRemaining = config.intermissionDuration
         }
+        let heal = max(1, doorMaxHealth / 12)
+        state.doorHealth = min(doorMaxHealth, state.doorHealth + heal)
+        state.intermissionRemaining = config.intermissionDuration
     }
 }

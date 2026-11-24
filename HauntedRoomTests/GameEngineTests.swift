@@ -49,7 +49,8 @@ final class GameEngineTests: XCTestCase {
 
         XCTAssertTrue(engine.upgradeDoor())
         XCTAssertEqual(engine.state.doorLevel, 2)
-        XCTAssertEqual(engine.state.doorHealth, 341)
+        XCTAssertEqual(engine.state.doorHealth, engine.config.doorMaxHealth(doorLevel: 2, wave: 1))
+        XCTAssertEqual(engine.state.doorHealth, 330)
     }
 
     func testTurretDamagesFrontEnemyAndDoorTakesHit() {
@@ -80,10 +81,13 @@ final class GameEngineTests: XCTestCase {
         XCTAssertEqual(engine.waveNumber, 2)
         XCTAssertEqual(engine.state.enemies.count, 1)
         XCTAssertEqual(engine.state.enemies.first?.kind, .walker)
-        XCTAssertEqual(engine.state.enemies.first?.maxHealth, 213)
+        XCTAssertEqual(
+            engine.state.enemies.first?.maxHealth,
+            engine.config.enemyHealth(kind: .walker, wave: 2)
+        )
     }
 
-    func testFiveWavesLevelUpAndScale() {
+    func testWavesKeepCountingWithoutLevelReset() {
         let engine = GameEngine()
         engine.start()
         engine.setAdminMode(true)
@@ -96,47 +100,48 @@ final class GameEngineTests: XCTestCase {
             }
         }
 
-        XCTAssertEqual(engine.level, 2)
+        XCTAssertEqual(engine.waveNumber, 6)
         XCTAssertEqual(engine.state.phase, .playing)
-        XCTAssertEqual(engine.state.intermissionRemaining, 6, accuracy: 0.001)
 
-        engine.advance(dt: 6)
-        XCTAssertEqual(engine.waveNumber, 1)
-        XCTAssertEqual(engine.state.enemies.first?.kind, .walker)
-        XCTAssertEqual(engine.state.enemies.first?.maxHealth, 207)
+        engine.advance(dt: 4)
+        XCTAssertEqual(engine.waveNumber, 6)
+        XCTAssertEqual(engine.waveEnemyTotal, 6)
+        XCTAssertEqual(
+            engine.state.enemies.first?.maxHealth,
+            engine.config.enemyHealth(kind: .walker, wave: 6)
+        )
     }
 
-    func testEndlessLevelsKeepGoing() {
+    func testManyWavesKeepGoing() {
         let engine = GameEngine()
         engine.start()
         engine.setAdminMode(true)
 
-        for _ in 0..<10 {
+        for _ in 0..<20 {
             engine.defeatCurrentWave()
-            let wait = engine.state.intermissionRemaining
-            if wait > 0 {
-                engine.advance(dt: wait)
-            }
+            engine.advance(dt: 4)
         }
 
-        XCTAssertEqual(engine.level, 3)
+        XCTAssertEqual(engine.waveNumber, 21)
         XCTAssertEqual(engine.state.phase, .playing)
-        XCTAssertEqual(engine.waveNumber, 1)
     }
 
     func testDoorBreakLosesRun() {
         let engine = GameEngine()
         engine.start()
 
-        for _ in 0..<28 {
+        for _ in 0..<27 {
             engine.advance(dt: 1.5)
         }
+        XCTAssertEqual(engine.state.phase, .playing)
+        XCTAssertEqual(engine.state.doorHealth, 4)
 
+        engine.advance(dt: 1.5)
         XCTAssertEqual(engine.state.phase, .lost)
         XCTAssertEqual(engine.state.doorHealth, 0)
     }
 
-    func testInfiniteCoinsIgnoreCostsAndLevelCaps() {
+    func testInfiniteCoinsUpgradeTurretsFreely() {
         let engine = GameEngine()
         engine.start()
         engine.setAdminMode(true)
@@ -145,14 +150,22 @@ final class GameEngineTests: XCTestCase {
         for slot in 0..<engine.config.turretSlotCount {
             XCTAssertTrue(engine.buildTurret(slot: slot))
         }
-        for slot in 0..<engine.config.turretSlotCount {
-            while engine.turretCost(at: slot) != nil {
-                XCTAssertTrue(engine.upgradeTurret(slot: slot))
-            }
-            XCTAssertEqual(engine.state.turrets[slot]?.level, engine.maxTurretLevel)
-        }
+        XCTAssertTrue(engine.upgradeTurret(slot: 0))
+        XCTAssertTrue(engine.upgradeTurret(slot: 0))
 
+        XCTAssertEqual(engine.state.turrets[0]?.level, 3)
+        XCTAssertNotNil(engine.turretCost(at: 0))
         XCTAssertEqual(engine.state.coins, engine.config.startingCoins)
+    }
+
+    func testTurretLevelsAreUncappedByWave() {
+        let config = GameConfig.standard
+        XCTAssertEqual(config.maxUpgradeLevel, 99_999_999)
+        XCTAssertEqual(config.maxWaves, 99_999_999)
+        XCTAssertGreaterThan(
+            config.turretDamage(kind: .arrow, level: 1, wave: 99_999_999),
+            config.turretDamage(kind: .arrow, level: 1, wave: 1)
+        )
     }
 
     func testInvincibleDoorStopsDamage() {
@@ -222,7 +235,6 @@ final class GameEngineTests: XCTestCase {
 
         XCTAssertEqual(engine.state.phase, .playing)
         XCTAssertEqual(engine.state.coins, engine.config.startingCoins)
-        XCTAssertEqual(engine.state.level, 1)
         XCTAssertEqual(engine.waveNumber, 1)
         XCTAssertEqual(engine.state.bedLevel, 1)
         XCTAssertEqual(engine.state.doorLevel, 1)
@@ -251,28 +263,24 @@ final class GameEngineTests: XCTestCase {
         let engine = GameEngine()
         engine.start()
 
-        XCTAssertEqual(engine.drainEvents(), [.waveStarted(level: 1, wave: 1)])
+        XCTAssertEqual(engine.drainEvents(), [.waveStarted(wave: 1)])
         XCTAssertTrue(engine.drainEvents().isEmpty)
     }
 
-    func testWaveDifficultyScales() {
+    func testWaveDifficultyScalesWithoutOverflow() {
         let config = GameConfig.standard
 
-        XCTAssertEqual(config.waveEnemyCount(level: 1, wave: 1), 1)
-        XCTAssertEqual(config.waveEnemyCount(level: 1, wave: 5), 5)
-        XCTAssertEqual(config.waveEnemyCount(level: 3, wave: 5), 6)
-        XCTAssertEqual(config.enemyKinds(level: 1, wave: 5).first, .boss)
+        XCTAssertEqual(config.waveEnemyCount(wave: 1), 1)
+        XCTAssertEqual(config.waveEnemyCount(wave: 8), 8)
+        XCTAssertEqual(config.waveEnemyCount(wave: 99_999_999), 8)
+        XCTAssertEqual(config.enemyKinds(wave: 5).first, .boss)
         XCTAssertGreaterThan(
-            config.enemyHealth(kind: .walker, level: 2, wave: 1),
-            config.enemyHealth(kind: .walker, level: 1, wave: 1)
+            config.enemyHealth(kind: .walker, wave: 2),
+            config.enemyHealth(kind: .walker, wave: 1)
         )
-        XCTAssertGreaterThan(
-            config.enemyDamage(kind: .walker, level: 2, wave: 1),
-            config.enemyDamage(kind: .walker, level: 1, wave: 1)
-        )
-        XCTAssertGreaterThan(
-            config.waveReward(level: 2, wave: 1),
-            config.waveReward(level: 1, wave: 1)
-        )
+        XCTAssertGreaterThan(config.waveReward(wave: 2), config.waveReward(wave: 1))
+        XCTAssertGreaterThan(config.enemyHealth(kind: .walker, wave: 99_999_999), 0)
+        XCTAssertGreaterThan(config.enemyDamage(kind: .walker, wave: 99_999_999), 0)
+        XCTAssertGreaterThan(config.doorMaxHealth(doorLevel: 99_999_999, wave: 99_999_999), 0)
     }
 }

@@ -255,10 +255,10 @@ final class GameScene: SKScene {
     }
 
     private func synchronizeNodes() {
-        waveLabel.text = "第 \(engine.level) 关 · \(engine.waveNumber)/\(engine.totalWavesPerLevel) 波"
-        bedLevelLabel.text = "床铺 Lv.\(engine.state.bedLevel) · +\(engine.incomePerSecond)/秒"
-        doorLevelLabel.text = "Lv.\(engine.state.doorLevel)"
-        doorHealthLabel.text = "\(engine.state.doorHealth)"
+        waveLabel.text = "第 \(compact(engine.waveNumber)) 波 · 怪物 Lv.\(compact(engine.monsterLevel))"
+        bedLevelLabel.text = "床铺 Lv.\(compact(engine.state.bedLevel)) · +\(compact(engine.incomePerSecond))/秒"
+        doorLevelLabel.text = "Lv.\(compact(engine.state.doorLevel))"
+        doorHealthLabel.text = compact(engine.state.doorHealth)
 
         let doorRatio = Double(engine.state.doorHealth) / Double(max(1, engine.doorMaxHealth))
         if engine.state.debug.invincibleDoor {
@@ -276,7 +276,7 @@ final class GameScene: SKScene {
                 turretBases[slot].strokeColor = color
                 turretIcons[slot].text = turret.kind.emoji
                 turretIcons[slot].fontSize = 19
-                turretLevelLabels[slot].text = "Lv.\(turret.level)"
+                turretLevelLabels[slot].text = "Lv.\(compact(turret.level))"
             } else {
                 let kind = engine.turretKind(at: slot) ?? .arrow
                 turretBases[slot].fillColor = UIColor.white.withAlphaComponent(0.05)
@@ -333,12 +333,10 @@ final class GameScene: SKScene {
                 if kind == .boss || kind == .brute {
                     showFloatingText("击退 \(kind.displayName)", at: enemyPositions[0])
                 }
-            case .waveStarted(let level, let wave):
-                showWaveBanner("第 \(level) 关 · 第 \(wave) 波")
-            case .waveCleared(_, _, let reward):
-                showFloatingText("+\(reward) 金币", at: CGPoint(x: 195, y: 258))
-            case .levelUp(let level):
-                showWaveBanner("进入第 \(level) 关")
+            case .waveStarted(let wave):
+                showWaveBanner("第 \(compact(wave)) 波")
+            case .waveCleared(_, let reward):
+                showFloatingText("+\(compact(reward)) 金币", at: CGPoint(x: 195, y: 258))
             case .lost:
                 break
             }
@@ -418,6 +416,19 @@ final class GameScene: SKScene {
         case .boss:
             return UIColor(red: 1, green: 0.42, blue: 0.42, alpha: 1)
         }
+    }
+
+    private func compact(_ value: Int) -> String {
+        let number = Double(max(0, value))
+        if value < 10_000 {
+            return "\(value)"
+        }
+        if value < 100_000_000 {
+            let scaled = number / 10_000
+            return String(format: scaled < 100 ? "%.1f万" : "%.0f万", scaled)
+        }
+        let scaled = number / 100_000_000
+        return String(format: scaled < 100 ? "%.1f亿" : "%.0f亿", scaled)
     }
 
     private func configure(label: SKLabelNode, size: CGFloat, bold: Bool) {

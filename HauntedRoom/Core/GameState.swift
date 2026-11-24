@@ -136,98 +136,102 @@ struct GameConfig {
     let maximumCoins: Int
     let turretSlotCount: Int
     let intermissionDuration: Double
-    let levelUpDuration: Double
     let wavesPerLevel: Int
     let enemySpawnInterval: Double
+    let maxUpgradeLevel: Int
 
     static let standard = GameConfig(
         startingCoins: 80,
-        maximumCoins: 9_999_999,
+        maximumCoins: 1_000_000_000_000_000,
         turretSlotCount: 4,
         intermissionDuration: 4,
-        levelUpDuration: 6,
-        wavesPerLevel: 5,
-        enemySpawnInterval: 0.8
+        wavesPerLevel: 99_999_999,
+        enemySpawnInterval: 0.8,
+        maxUpgradeLevel: 99_999_999
     )
 
-    func waveEnemyCount(level: Int, wave: Int) -> Int {
-        min(max(1, wave + (level - 1) / 2), 8)
+    var maxWaves: Int { wavesPerLevel }
+
+    private func growth(_ steps: Int, rate: Double) -> Double {
+        let steps = max(0, steps)
+        let capped = min(steps, 60)
+        let extra = max(0, steps - 60)
+        return pow(rate, Double(capped)) * (1 + 0.05 * Double(extra))
     }
 
-    func enemyKinds(level: Int, wave: Int) -> [EnemyKind] {
-        let count = waveEnemyCount(level: level, wave: wave)
+    private func boundedInt(_ value: Double, limit: Int = 9_000_000_000_000_000_000) -> Int {
+        guard value.isFinite else { return limit }
+        let rounded = value.rounded()
+        return Int(min(max(0, rounded), Double(limit)))
+    }
+
+    private func scaledCost(_ base: Double, rate: Double, level: Int) -> Int {
+        let steps = max(0, level - 1)
+        let capped = min(steps, 40)
+        let extra = max(0, steps - 40)
+        let value = base * pow(rate, Double(capped)) * (1 + 0.5 * Double(extra))
+        return boundedInt(value, limit: maximumCoins)
+    }
+
+    func waveEnemyCount(wave: Int) -> Int {
+        min(max(1, wave), 8)
+    }
+
+    func enemyKinds(wave: Int) -> [EnemyKind] {
+        let count = waveEnemyCount(wave: wave)
         return (0..<count).map { index in
-            if wave == wavesPerLevel && index == 0 { return .boss }
-            if level >= 2 && (index + wave) % 4 == 0 { return .brute }
+            if wave % 5 == 0 && index == 0 { return .boss }
+            if wave >= 3 && (index + wave) % 4 == 0 { return .brute }
             if wave >= 2 && (index + wave) % 2 == 1 { return .runner }
             return .walker
         }
     }
 
-    func enemyHealth(kind: EnemyKind, level: Int, wave: Int) -> Int {
-        let value = Double(kind.baseHealth)
-            * pow(1.42, Double(wave - 1))
-            * pow(1.38, Double(level - 1))
-        return max(1, Int(value.rounded()))
+    func enemyHealth(kind: EnemyKind, wave: Int) -> Int {
+        boundedInt(Double(kind.baseHealth) * growth(wave - 1, rate: 1.42))
     }
 
-    func enemyDamage(kind: EnemyKind, level: Int, wave: Int) -> Int {
-        let value = Double(kind.baseDamage)
-            * pow(1.18, Double(wave - 1))
-            * pow(1.13, Double(level - 1))
-        return max(1, Int(value.rounded()))
+    func enemyDamage(kind: EnemyKind, wave: Int) -> Int {
+        boundedInt(
+            Double(kind.baseDamage) * growth(wave - 1, rate: 1.18),
+            limit: 1_000_000_000_000_000
+        )
     }
 
-    func enemyAttackInterval(kind: EnemyKind, level: Int, wave: Int) -> Double {
-        max(0.45, kind.baseAttackInterval - 0.05 * Double(wave - 1) - 0.02 * Double(level - 1))
+    func enemyAttackInterval(kind: EnemyKind, wave: Int) -> Double {
+        max(0.45, kind.baseAttackInterval - 0.05 * Double(wave - 1))
     }
 
-    func waveReward(level: Int, wave: Int) -> Int {
-        let value = 60.0 * pow(1.45, Double(wave - 1)) * pow(1.3, Double(level - 1))
-        return max(1, Int(value.rounded()))
+    func waveReward(wave: Int) -> Int {
+        boundedInt(60.0 * growth(wave - 1, rate: 1.45), limit: maximumCoins)
     }
 
-    func bedIncome(bedLevel: Int, level: Int) -> Int {
-        4 * bedLevel * level
-    }
-
-    func maxBedLevel(level: Int) -> Int {
-        min(3 + level, 12)
-    }
-
-    func maxDoorLevel(level: Int) -> Int {
-        min(3 + level, 12)
-    }
-
-    func maxTurretLevel(level: Int) -> Int {
-        min(3 + level, 12)
+    func bedIncome(bedLevel: Int) -> Int {
+        boundedInt(4.0 * Double(bedLevel), limit: maximumCoins)
     }
 
     func bedUpgradeCost(currentLevel: Int) -> Int {
-        Int((80.0 * pow(1.9, Double(currentLevel - 1))).rounded())
+        scaledCost(80.0, rate: 1.9, level: currentLevel)
     }
 
     func doorUpgradeCost(currentLevel: Int) -> Int {
-        Int((70.0 * pow(1.85, Double(currentLevel - 1))).rounded())
+        scaledCost(70.0, rate: 1.85, level: currentLevel)
     }
 
     func turretUpgradeCost(kind: TurretKind, currentLevel: Int) -> Int {
-        let base = 80.0 * pow(1.8, Double(currentLevel - 1))
-        let kindFactor = Double(kind.buildCost) / 50.0
-        return Int((base * kindFactor).rounded())
+        scaledCost(Double(kind.buildCost), rate: 1.7, level: currentLevel)
     }
 
-    func doorMaxHealth(doorLevel: Int, level: Int) -> Int {
-        let value = 220.0 * pow(1.55, Double(doorLevel - 1)) * pow(1.3, Double(level - 1))
-        return max(1, Int(value.rounded()))
+    func doorMaxHealth(doorLevel: Int, wave: Int) -> Int {
+        let levelFactor = 1.0 + 0.5 * Double(doorLevel - 1)
+        return boundedInt(220.0 * levelFactor * growth(wave - 1, rate: 1.35))
     }
 
-    func turretDamage(kind: TurretKind, level: Int, playerLevel: Int) -> Int {
-        let value = 14.0
-            * (1.0 + 0.6 * Double(level - 1))
-            * kind.damageFactor
-            * pow(1.22, Double(playerLevel - 1))
-        return max(1, Int(value.rounded()))
+    func turretDamage(kind: TurretKind, level: Int, wave: Int) -> Int {
+        let levelFactor = 1.0 + 0.6 * Double(level - 1)
+        return boundedInt(
+            14.0 * levelFactor * kind.damageFactor * growth(wave - 1, rate: 1.3)
+        )
     }
 
     func turretAttackInterval(kind: TurretKind, level: Int) -> Double {
@@ -238,7 +242,6 @@ struct GameConfig {
 struct GameState: Equatable {
     var phase: GamePhase = .ready
     var coins: Int
-    var level = 1
     var waveIndex = 0
     var bedLevel = 1
     var doorLevel = 1
@@ -256,7 +259,7 @@ struct GameState: Equatable {
 
     init(config: GameConfig) {
         coins = config.startingCoins
-        doorHealth = config.doorMaxHealth(doorLevel: 1, level: 1)
+        doorHealth = config.doorMaxHealth(doorLevel: 1, wave: 1)
         turrets = Array(repeating: nil, count: config.turretSlotCount)
     }
 }
@@ -265,8 +268,7 @@ enum GameEvent: Equatable {
     case shot(slot: Int)
     case doorHit
     case enemyDefeated(kind: EnemyKind)
-    case waveStarted(level: Int, wave: Int)
-    case waveCleared(level: Int, wave: Int, reward: Int)
-    case levelUp(Int)
+    case waveStarted(wave: Int)
+    case waveCleared(wave: Int, reward: Int)
     case lost
 }

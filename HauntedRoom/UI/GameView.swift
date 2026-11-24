@@ -52,7 +52,7 @@ struct GameView: View {
                 Text("守夜小屋")
                     .font(.system(size: 23, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
-                Text("无限关卡 · 第 \(engine.level) 关 · 第 \(engine.waveNumber)/\(engine.totalWavesPerLevel) 波")
+                Text("第 \(compact(engine.waveNumber)) / \(compact(engine.maxWaves)) 波 · 怪物 Lv.\(compact(engine.monsterLevel))")
                     .font(.caption2)
                     .foregroundColor(.gray)
             }
@@ -70,26 +70,26 @@ struct GameView: View {
     private var stats: some View {
         HStack(spacing: 6) {
             statCard(
-                title: "关卡",
-                value: "\(engine.level)",
+                title: "波次",
+                value: compact(engine.waveNumber),
                 icon: "flag.fill",
                 color: .mint
             )
             statCard(
                 title: "金币",
-                value: engine.state.debug.infiniteCoins ? "∞" : "\(engine.state.coins)",
+                value: engine.state.debug.infiniteCoins ? "∞" : compact(engine.state.coins),
                 icon: "creditcard.fill",
                 color: .yellow
             )
             statCard(
                 title: "收益",
-                value: "+\(engine.incomePerSecond)",
+                value: "+\(compact(engine.incomePerSecond))",
                 icon: "bed.double.fill",
                 color: .green
             )
             statCard(
                 title: "房门",
-                value: "\(engine.state.doorHealth)",
+                value: compact(engine.state.doorHealth),
                 icon: engine.state.debug.invincibleDoor ? "lock.shield.fill" : "shield.fill",
                 color: engine.state.debug.invincibleDoor ? .cyan : .orange
             )
@@ -99,7 +99,7 @@ struct GameView: View {
     private var waveStatus: some View {
         VStack(spacing: 4) {
             HStack {
-                Text("第 \(engine.level) 关 · 第 \(engine.waveNumber)/\(engine.totalWavesPerLevel) 波")
+                Text("第 \(compact(engine.waveNumber)) 波 · 怪物 Lv.\(compact(engine.monsterLevel))")
                     .font(.caption.weight(.semibold))
                 Spacer()
                 Text(waveStatusText)
@@ -138,9 +138,9 @@ struct GameView: View {
 
     private var equipmentBar: some View {
         HStack(spacing: 6) {
-            equipmentChip("🛏 Lv.\(engine.state.bedLevel)/\(engine.maxBedLevel)")
-            equipmentChip("🚪 Lv.\(engine.state.doorLevel)/\(engine.maxDoorLevel)")
-            equipmentChip("⚔️ DPS \(engine.totalTurretDPS)")
+            equipmentChip("🛏 Lv.\(compact(engine.state.bedLevel))")
+            equipmentChip("🚪 Lv.\(compact(engine.state.doorLevel))")
+            equipmentChip("⚔️ DPS \(compact(engine.totalTurretDPS))")
             Spacer(minLength: 0)
         }
     }
@@ -148,7 +148,7 @@ struct GameView: View {
     private var roomControls: some View {
         HStack(spacing: 10) {
             controlButton(
-                title: "升级床铺 Lv.\(engine.state.bedLevel)/\(engine.maxBedLevel)",
+                title: "升级床铺 Lv.\(compact(engine.state.bedLevel))",
                 subtitle: costText(engine.bedUpgradeCost),
                 icon: "bed.double.fill",
                 color: .blue,
@@ -156,7 +156,7 @@ struct GameView: View {
                 action: { engine.upgradeBed() }
             )
             controlButton(
-                title: "升级房门 Lv.\(engine.state.doorLevel)/\(engine.maxDoorLevel)",
+                title: "升级房门 Lv.\(compact(engine.state.doorLevel))",
                 subtitle: costText(engine.doorUpgradeCost),
                 icon: "shield.fill",
                 color: .orange,
@@ -174,7 +174,7 @@ struct GameView: View {
                 controlButton(
                     title: turret == nil
                         ? "建造\(kind.displayName) \(slot + 1)"
-                        : "\(kind.displayName) \(slot + 1) · Lv.\(turret!.level)/\(engine.maxTurretLevel)",
+                        : "\(kind.displayName) \(slot + 1) · Lv.\(compact(turret!.level))",
                     subtitle: costText(engine.turretCost(at: slot)),
                     icon: kind.emoji,
                     isEmoji: true,
@@ -209,7 +209,7 @@ struct GameView: View {
     private var startOverlay: some View {
         overlayCard(
             title: "夜幕降临",
-            subtitle: "躺床产金币，升级床铺、房门和四类炮塔。怪物一波比一波多，关卡无限，守住越久越好。",
+            subtitle: "共 99,999,999 波，怪物等级从 0 一路涨到 99,999,999。躺床产金币，升级床铺、房门和四类炮塔，炮塔等级无上限。",
             icon: "moon.stars.fill",
             buttonTitle: "躺下开始",
             buttonColor: .blue,
@@ -220,7 +220,7 @@ struct GameView: View {
     private var resultOverlay: some View {
         overlayCard(
             title: "房门被攻破",
-            subtitle: "你守到了第 \(engine.level) 关 · 第 \(engine.waveNumber) 波。重新发育，再来一次。",
+            subtitle: "你守到了第 \(compact(engine.waveNumber)) 波 · 怪物 Lv.\(compact(engine.monsterLevel))。重新发育，再来一次。",
             icon: "door.left.hand.open",
             buttonTitle: "再来一局",
             buttonColor: .red,
@@ -343,6 +343,19 @@ struct GameView: View {
 
     private func costText(_ cost: Int?) -> String {
         guard let cost = cost else { return "已满级" }
-        return engine.state.debug.infiniteCoins ? "免费 · 管理员" : "\(cost) 金币"
+        return engine.state.debug.infiniteCoins ? "免费 · 管理员" : "\(compact(cost)) 金币"
+    }
+
+    private func compact(_ value: Int) -> String {
+        let number = Double(max(0, value))
+        if value < 10_000 {
+            return "\(value)"
+        }
+        if value < 100_000_000 {
+            let scaled = number / 10_000
+            return String(format: scaled < 100 ? "%.1f万" : "%.0f万", scaled)
+        }
+        let scaled = number / 100_000_000
+        return String(format: scaled < 100 ? "%.1f亿" : "%.0f亿", scaled)
     }
 }
