@@ -11,9 +11,6 @@ final class GameScene: SKScene {
     private let doorShape = SKShapeNode()
     private let doorLevelLabel = SKLabelNode()
     private let doorHealthLabel = SKLabelNode()
-    private let ghostNode = SKNode()
-    private let ghostHealthBar = SKShapeNode()
-    private let ghostHealthLabel = SKLabelNode()
     private let waveLabel = SKLabelNode()
     private let statusLabel = SKLabelNode()
     private let waveBanner = SKLabelNode()
@@ -23,13 +20,27 @@ final class GameScene: SKScene {
     private var turretIcons: [SKLabelNode] = []
     private var turretLevelLabels: [SKLabelNode] = []
 
+    private var enemyNodes: [SKNode] = []
+    private var enemyEmojiLabels: [SKLabelNode] = []
+    private var enemyNameLabels: [SKLabelNode] = []
+    private var enemyHealthFills: [SKShapeNode] = []
+
     private let doorPosition = CGPoint(x: 337, y: 240)
-    private let ghostPosition = CGPoint(x: 320, y: 385)
+    private let enemyPositions: [CGPoint] = [
+        CGPoint(x: 195, y: 408),
+        CGPoint(x: 255, y: 408),
+        CGPoint(x: 315, y: 408),
+        CGPoint(x: 365, y: 408),
+        CGPoint(x: 195, y: 372),
+        CGPoint(x: 255, y: 372),
+        CGPoint(x: 315, y: 372),
+        CGPoint(x: 365, y: 372)
+    ]
     private let turretPositions = [
-        CGPoint(x: 205, y: 350),
-        CGPoint(x: 275, y: 330),
-        CGPoint(x: 205, y: 145),
-        CGPoint(x: 275, y: 125)
+        CGPoint(x: 165, y: 318),
+        CGPoint(x: 225, y: 318),
+        CGPoint(x: 165, y: 152),
+        CGPoint(x: 225, y: 152)
     ]
 
     init(engine: GameEngine) {
@@ -77,22 +88,22 @@ final class GameScene: SKScene {
         }
 
         configure(label: waveLabel, size: 17, bold: true)
-        waveLabel.position = CGPoint(x: 195, y: 440)
+        waveLabel.position = CGPoint(x: 195, y: 455)
         addChild(waveLabel)
 
-        configure(label: statusLabel, size: 14, bold: false)
+        configure(label: statusLabel, size: 13, bold: false)
         statusLabel.fontColor = UIColor(red: 0.55, green: 0.85, blue: 1, alpha: 1)
-        statusLabel.position = CGPoint(x: 185, y: 405)
+        statusLabel.position = CGPoint(x: 195, y: 432)
         addChild(statusLabel)
 
         buildWindow()
         buildBed()
         buildDoor()
-        buildGhost()
+        buildEnemies()
         buildTurrets()
 
-        configure(label: waveBanner, size: 30, bold: true)
-        waveBanner.position = CGPoint(x: 195, y: 270)
+        configure(label: waveBanner, size: 28, bold: true)
+        waveBanner.position = CGPoint(x: 195, y: 268)
         waveBanner.fontColor = .white
         waveBanner.zPosition = 20
         waveBanner.alpha = 0
@@ -175,35 +186,42 @@ final class GameScene: SKScene {
         doorNode.addChild(knob)
     }
 
-    private func buildGhost() {
-        ghostNode.position = ghostPosition
-        ghostNode.zPosition = 5
-        addChild(ghostNode)
+    private func buildEnemies() {
+        for position in enemyPositions {
+            let node = SKNode()
+            node.position = position
+            node.zPosition = 5
+            addChild(node)
 
-        let ghost = SKLabelNode(text: "👻")
-        ghost.fontSize = 62
-        ghost.position = CGPoint(x: 0, y: -15)
-        ghostNode.addChild(ghost)
+            let emoji = SKLabelNode(text: "")
+            emoji.fontSize = 28
+            emoji.verticalAlignmentMode = .center
+            emoji.horizontalAlignmentMode = .center
+            emoji.position = CGPoint(x: 0, y: 7)
+            node.addChild(emoji)
 
-        let barBackground = SKShapeNode(rectOf: CGSize(width: 84, height: 8), cornerRadius: 4)
-        barBackground.position = CGPoint(x: 0, y: -48)
-        barBackground.fillColor = UIColor.black.withAlphaComponent(0.65)
-        barBackground.strokeColor = .clear
-        ghostNode.addChild(barBackground)
+            let name = SKLabelNode()
+            configure(label: name, size: 9, bold: false)
+            name.position = CGPoint(x: 0, y: -12)
+            node.addChild(name)
 
-        ghostHealthBar.path = CGPath(
-            roundedRect: CGRect(x: -40, y: -51, width: 80, height: 6),
-            cornerWidth: 3,
-            cornerHeight: 3,
-            transform: nil
-        )
-        ghostHealthBar.fillColor = UIColor(red: 0.95, green: 0.25, blue: 0.35, alpha: 1)
-        ghostHealthBar.strokeColor = .clear
-        ghostNode.addChild(ghostHealthBar)
+            let barBackground = SKShapeNode(rectOf: CGSize(width: 46, height: 5), cornerRadius: 2.5)
+            barBackground.position = CGPoint(x: 0, y: -24)
+            barBackground.fillColor = UIColor.black.withAlphaComponent(0.6)
+            barBackground.strokeColor = .clear
+            node.addChild(barBackground)
 
-        configure(label: ghostHealthLabel, size: 11, bold: true)
-        ghostHealthLabel.position = CGPoint(x: 0, y: -69)
-        ghostNode.addChild(ghostHealthLabel)
+            let fill = SKShapeNode()
+            fill.path = CGPath(rect: CGRect(x: 0, y: -1.5, width: 42, height: 3), transform: nil)
+            fill.position = CGPoint(x: -21, y: -24)
+            fill.strokeColor = .clear
+            node.addChild(fill)
+
+            enemyNodes.append(node)
+            enemyEmojiLabels.append(emoji)
+            enemyNameLabels.append(name)
+            enemyHealthFills.append(fill)
+        }
     }
 
     private func buildTurrets() {
@@ -218,13 +236,15 @@ final class GameScene: SKScene {
             node.addChild(base)
 
             let icon = SKLabelNode()
-            configure(label: icon, size: 18, bold: true)
-            icon.position = CGPoint(x: 0, y: -7)
+            icon.fontSize = 18
+            icon.verticalAlignmentMode = .center
+            icon.horizontalAlignmentMode = .center
+            icon.position = CGPoint(x: 0, y: 4)
             node.addChild(icon)
 
             let level = SKLabelNode()
-            configure(label: level, size: 11, bold: false)
-            level.position = CGPoint(x: 0, y: -43)
+            configure(label: level, size: 10, bold: false)
+            level.position = CGPoint(x: 0, y: -17)
             node.addChild(level)
 
             turretNodes.append(node)
@@ -235,12 +255,12 @@ final class GameScene: SKScene {
     }
 
     private func synchronizeNodes() {
-        waveLabel.text = "第 \(engine.waveNumber) / \(engine.config.waves.count) 波"
+        waveLabel.text = "第 \(engine.level) 关 · \(engine.waveNumber)/\(engine.totalWavesPerLevel) 波"
         bedLevelLabel.text = "床铺 Lv.\(engine.state.bedLevel) · +\(engine.incomePerSecond)/秒"
         doorLevelLabel.text = "Lv.\(engine.state.doorLevel)"
         doorHealthLabel.text = "\(engine.state.doorHealth)"
 
-        let doorRatio = Double(engine.state.doorHealth) / Double(engine.doorMaxHealth)
+        let doorRatio = Double(engine.state.doorHealth) / Double(max(1, engine.doorMaxHealth))
         if engine.state.debug.invincibleDoor {
             doorShape.fillColor = UIColor(red: 0.15, green: 0.65, blue: 0.75, alpha: 1)
         } else if doorRatio > 0.5 {
@@ -251,34 +271,54 @@ final class GameScene: SKScene {
 
         for slot in turretNodes.indices {
             if let turret = engine.state.turrets[slot] {
-                turretBases[slot].fillColor = UIColor(red: 0.8, green: 0.42, blue: 0.12, alpha: 1)
-                turretBases[slot].strokeColor = UIColor(red: 1, green: 0.75, blue: 0.3, alpha: 1)
-                turretIcons[slot].text = "炮"
+                let color = turretColor(turret.kind)
+                turretBases[slot].fillColor = color.withAlphaComponent(0.78)
+                turretBases[slot].strokeColor = color
+                turretIcons[slot].text = turret.kind.emoji
+                turretIcons[slot].fontSize = 19
                 turretLevelLabels[slot].text = "Lv.\(turret.level)"
             } else {
+                let kind = engine.turretKind(at: slot) ?? .arrow
                 turretBases[slot].fillColor = UIColor.white.withAlphaComponent(0.05)
                 turretBases[slot].strokeColor = UIColor.white.withAlphaComponent(0.25)
                 turretIcons[slot].text = "＋"
-                turretLevelLabels[slot].text = "炮台槽位"
+                turretIcons[slot].fontSize = 18
+                turretLevelLabels[slot].text = kind.displayName
             }
         }
 
-        if let ghost = engine.state.ghost {
-            ghostNode.isHidden = false
-            let ratio = max(0, Double(ghost.health) / Double(ghost.maxHealth))
-            ghostHealthBar.xScale = CGFloat(ratio)
-            ghostHealthLabel.text = "\(ghost.health) / \(ghost.maxHealth)"
-            statusLabel.text = "猛鬼正在进攻"
-            statusLabel.fontColor = UIColor(red: 1, green: 0.55, blue: 0.55, alpha: 1)
-        } else {
-            ghostNode.isHidden = true
-            ghostHealthLabel.text = ""
-            if engine.state.phase == .playing {
-                statusLabel.text = "安全间隙 · \(max(0, Int(ceil(engine.state.intermissionRemaining)))) 秒"
-                statusLabel.fontColor = UIColor(red: 0.55, green: 0.85, blue: 1, alpha: 1)
+        let enemies = engine.state.enemies
+        for index in enemyNodes.indices {
+            if index < enemies.count {
+                let enemy = enemies[index]
+                let color = enemyColor(enemy.kind)
+                enemyNodes[index].isHidden = false
+                enemyEmojiLabels[index].text = enemy.kind.emoji
+                enemyNameLabels[index].text = enemy.kind.displayName
+                enemyNameLabels[index].fontColor = color
+                let ratio = CGFloat(enemy.health) / CGFloat(max(1, enemy.maxHealth))
+                enemyHealthFills[index].xScale = max(0.02, min(1, ratio))
+                enemyHealthFills[index].fillColor = color
             } else {
-                statusLabel.text = ""
+                enemyNodes[index].isHidden = true
             }
+        }
+
+        switch engine.state.phase {
+        case .playing:
+            if engine.remainingEnemies > 0 {
+                statusLabel.text = "怪物进攻 · 剩余 \(engine.remainingEnemies) 只"
+                statusLabel.fontColor = UIColor(red: 1, green: 0.55, blue: 0.55, alpha: 1)
+            } else {
+                let seconds = max(0, Int(ceil(engine.state.intermissionRemaining)))
+                statusLabel.text = "安全间隙 · \(seconds) 秒"
+                statusLabel.fontColor = UIColor(red: 0.55, green: 0.85, blue: 1, alpha: 1)
+            }
+        case .lost:
+            statusLabel.text = "房门被攻破"
+            statusLabel.fontColor = UIColor(red: 1, green: 0.4, blue: 0.4, alpha: 1)
+        case .ready:
+            statusLabel.text = ""
         }
     }
 
@@ -289,27 +329,33 @@ final class GameScene: SKScene {
                 fireProjectile(from: slot)
             case .doorHit:
                 shakeDoor()
-            case .ghostDefeated(let wave):
-                let reward = engine.config.waves[wave - 1].reward
-                showFloatingText("击退！+\(reward) 金币", at: ghostPosition)
-            case .waveStarted(let wave):
-                showWaveBanner(wave)
-            case .won, .lost:
+            case .enemyDefeated(let kind):
+                if kind == .boss || kind == .brute {
+                    showFloatingText("击退 \(kind.displayName)", at: enemyPositions[0])
+                }
+            case .waveStarted(let level, let wave):
+                showWaveBanner("第 \(level) 关 · 第 \(wave) 波")
+            case .waveCleared(_, _, let reward):
+                showFloatingText("+\(reward) 金币", at: CGPoint(x: 195, y: 258))
+            case .levelUp(let level):
+                showWaveBanner("进入第 \(level) 关")
+            case .lost:
                 break
             }
         }
     }
 
     private func fireProjectile(from slot: Int) {
-        guard turretPositions.indices.contains(slot) else { return }
-        let projectile = SKShapeNode(circleOfRadius: 5)
+        guard turretPositions.indices.contains(slot), !engine.state.enemies.isEmpty else { return }
+        let target = enemyPositions[0]
+        let projectile = SKShapeNode(circleOfRadius: 4.5)
         projectile.position = turretPositions[slot]
         projectile.fillColor = UIColor(red: 1, green: 0.85, blue: 0.25, alpha: 1)
         projectile.strokeColor = .clear
         projectile.zPosition = 10
         addChild(projectile)
         projectile.run(.sequence([
-            .move(to: ghostPosition, duration: 0.12),
+            .move(to: target, duration: 0.12),
             .removeFromParent()
         ]))
     }
@@ -326,7 +372,7 @@ final class GameScene: SKScene {
 
     private func showFloatingText(_ text: String, at position: CGPoint) {
         let label = SKLabelNode(text: text)
-        configure(label: label, size: 16, bold: true)
+        configure(label: label, size: 15, bold: true)
         label.fontColor = UIColor(red: 1, green: 0.85, blue: 0.3, alpha: 1)
         label.position = position
         label.zPosition = 15
@@ -337,15 +383,41 @@ final class GameScene: SKScene {
         ]))
     }
 
-    private func showWaveBanner(_ wave: Int) {
+    private func showWaveBanner(_ text: String) {
         waveBanner.removeAllActions()
-        waveBanner.text = "第 \(wave) 波"
+        waveBanner.text = text
         waveBanner.alpha = 0
         waveBanner.run(.sequence([
             .fadeIn(withDuration: 0.15),
             .wait(forDuration: 0.65),
             .fadeOut(withDuration: 0.35)
         ]))
+    }
+
+    private func turretColor(_ kind: TurretKind) -> UIColor {
+        switch kind {
+        case .arrow:
+            return UIColor(red: 0.35, green: 0.78, blue: 0.45, alpha: 1)
+        case .cannon:
+            return UIColor(red: 0.9, green: 0.48, blue: 0.2, alpha: 1)
+        case .frost:
+            return UIColor(red: 0.35, green: 0.68, blue: 0.98, alpha: 1)
+        case .tesla:
+            return UIColor(red: 0.78, green: 0.5, blue: 0.95, alpha: 1)
+        }
+    }
+
+    private func enemyColor(_ kind: EnemyKind) -> UIColor {
+        switch kind {
+        case .walker:
+            return UIColor(red: 0.85, green: 0.9, blue: 1, alpha: 1)
+        case .runner:
+            return UIColor(red: 0.4, green: 0.9, blue: 0.95, alpha: 1)
+        case .brute:
+            return UIColor(red: 0.5, green: 0.95, blue: 0.5, alpha: 1)
+        case .boss:
+            return UIColor(red: 1, green: 0.42, blue: 0.42, alpha: 1)
+        }
     }
 
     private func configure(label: SKLabelNode, size: CGFloat, bold: Bool) {

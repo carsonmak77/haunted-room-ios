@@ -26,8 +26,8 @@ struct AdminPanelView: View {
                         ))
                         Button("增加 1000 金币", action: engine.addDebugCoins)
                             .disabled(engine.state.phase != .playing)
-                        Button("击败当前猛鬼", action: engine.defeatCurrentGhost)
-                            .disabled(engine.state.phase != .playing || engine.state.ghost == nil)
+                        Button("清除本波怪物", action: engine.defeatCurrentWave)
+                            .disabled(engine.state.phase != .playing || engine.remainingEnemies == 0)
                             .foregroundColor(.red)
                     }
 

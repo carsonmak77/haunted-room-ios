@@ -12,43 +12,70 @@ final class GameEngine: ObservableObject {
         state = GameState(config: config)
     }
 
-    var incomePerSecond: Int {
-        config.bedIncome[state.bedLevel - 1]
+    var level: Int { state.level }
+    var waveNumber: Int { state.waveIndex + 1 }
+    var totalWavesPerLevel: Int { config.wavesPerLevel }
+    var incomePerSecond: Int { config.bedIncome(bedLevel: state.bedLevel, level: state.level) }
+    var doorMaxHealth: Int { config.doorMaxHealth(doorLevel: state.doorLevel, level: state.level) }
+    var maxBedLevel: Int { config.maxBedLevel(level: state.level) }
+    var maxDoorLevel: Int { config.maxDoorLevel(level: state.level) }
+    var maxTurretLevel: Int { config.maxTurretLevel(level: state.level) }
+
+    var remainingEnemies: Int { state.enemies.count + state.enemiesRemainingToSpawn }
+    var waveEnemyTotal: Int { state.waveKinds.count }
+    var waveEnemiesCleared: Int { max(0, state.waveKinds.count - remainingEnemies) }
+
+    var waveComposition: [(kind: EnemyKind, count: Int)] {
+        EnemyKind.allCases.compactMap { kind in
+            let count = state.waveKinds.filter { $0 == kind }.count
+            return count > 0 ? (kind: kind, count: count) : nil
+        }
     }
 
-    var doorMaxHealth: Int {
-        config.doorMaxHealth[state.doorLevel - 1]
-    }
-
-    var waveNumber: Int {
-        min(state.waveIndex + 1, config.waves.count)
+    var totalTurretDPS: Int {
+        state.turrets.indices.reduce(0) { total, slot in
+            guard let turret = state.turrets[slot] else { return total }
+            let damage = Double(config.turretDamage(kind: turret.kind, level: turret.level, playerLevel: state.level))
+            let interval = config.turretAttackInterval(kind: turret.kind, level: turret.level)
+            return total + Int((damage / interval).rounded())
+        }
     }
 
     var bedUpgradeCost: Int? {
-        nextCost(level: state.bedLevel, costs: config.bedUpgradeCosts)
+        guard state.bedLevel < maxBedLevel else { return nil }
+        return config.bedUpgradeCost(currentLevel: state.bedLevel)
     }
 
     var doorUpgradeCost: Int? {
-        nextCost(level: state.doorLevel, costs: config.doorUpgradeCosts)
+        guard state.doorLevel < maxDoorLevel else { return nil }
+        return config.doorUpgradeCost(currentLevel: state.doorLevel)
     }
 
-    var canUpgradeBed: Bool {
-        canAfford(bedUpgradeCost)
-    }
+    var canUpgradeBed: Bool { canAfford(bedUpgradeCost) }
+    var canUpgradeDoor: Bool { canAfford(doorUpgradeCost) }
 
-    var canUpgradeDoor: Bool {
-        canAfford(doorUpgradeCost)
+    func turretKind(at slot: Int) -> TurretKind? {
+        guard state.turrets.indices.contains(slot) else { return nil }
+        if let turret = state.turrets[slot] { return turret.kind }
+        return TurretKind.allCases[slot % TurretKind.allCases.count]
     }
 
     func turretCost(at slot: Int) -> Int? {
-        guard state.turrets.indices.contains(slot) else { return nil }
-        guard let turret = state.turrets[slot] else { return config.turretBuildCost }
-        return nextCost(level: turret.level, costs: config.turretUpgradeCosts)
+        guard let kind = turretKind(at: slot) else { return nil }
+        guard let turret = state.turrets[slot] else { return kind.buildCost }
+        guard turret.level < maxTurretLevel else { return nil }
+        return config.turretUpgradeCost(kind: turret.kind, currentLevel: turret.level)
+    }
+
+    func turretDamage(at slot: Int) -> Int {
+        guard let turret = state.turrets[slot] else { return 0 }
+        return config.turretDamage(kind: turret.kind, level: turret.level, playerLevel: state.level)
     }
 
     func canBuildTurret(at slot: Int) -> Bool {
         guard state.turrets.indices.contains(slot), state.turrets[slot] == nil else { return false }
-        return canAfford(config.turretBuildCost)
+        guard let cost = turretCost(at: slot) else { return false }
+        return canAfford(cost)
     }
 
     func canUpgradeTurret(at slot: Int) -> Bool {
@@ -60,7 +87,7 @@ final class GameEngine: ObservableObject {
         guard state.phase == .ready else { return }
         objectWillChange.send()
         state.phase = .playing
-        spawnCurrentWave()
+        beginWave()
     }
 
     func restart() {
@@ -68,43 +95,24 @@ final class GameEngine: ObservableObject {
         state = GameState(config: config)
         state.phase = .playing
         events.removeAll()
-        spawnCurrentWave()
+        beginWave()
     }
 
     func advance(dt: Double) {
         guard state.phase == .playing, dt > 0, dt.isFinite else { return }
         objectWillChange.send()
+        let waitingForNextWave = isWaitingForNextWave
         state.elapsed += dt
         earnIncome(dt: dt)
+        updateSpawning(dt: dt)
+        updateTurrets(dt: dt)
+        updateEnemyAttacks(dt: dt)
+        checkWaveCleared()
 
-        for slot in state.turrets.indices {
-            guard var turret = state.turrets[slot], state.ghost != nil else { continue }
-            turret.cooldown -= dt
-            if turret.cooldown <= 0 {
-                turret.cooldown = config.turretAttackIntervals[turret.level - 1]
-                state.turrets[slot] = turret
-                damageGhost(config.turretDamage[turret.level - 1], slot: slot)
-            } else {
-                state.turrets[slot] = turret
-            }
-        }
-
-        if state.phase == .playing, state.ghost == nil {
-            state.intermissionRemaining -= dt
-            if state.intermissionRemaining <= 0 {
-                spawnCurrentWave()
-            }
-        }
-
-        if state.phase == .playing, var ghost = state.ghost {
-            ghost.attackCooldown -= dt
-            if ghost.attackCooldown <= 0 {
-                ghost.attackCooldown = config.waves[state.waveIndex].attackInterval
-                state.ghost = ghost
-                attackDoor()
-            } else {
-                state.ghost = ghost
-            }
+        guard waitingForNextWave, state.phase == .playing else { return }
+        state.intermissionRemaining = max(0, state.intermissionRemaining - dt)
+        if state.intermissionRemaining == 0 {
+            beginWave()
         }
     }
 
@@ -130,9 +138,10 @@ final class GameEngine: ObservableObject {
     @discardableResult
     func buildTurret(slot: Int) -> Bool {
         guard state.phase == .playing, canBuildTurret(at: slot) else { return false }
+        guard let kind = turretKind(at: slot), let cost = turretCost(at: slot) else { return false }
         objectWillChange.send()
-        guard spend(config.turretBuildCost) else { return false }
-        state.turrets[slot] = TurretState(level: 1, cooldown: 0)
+        guard spend(cost) else { return false }
+        state.turrets[slot] = TurretState(kind: kind, level: 1, cooldown: 0)
         return true
     }
 
@@ -179,10 +188,12 @@ final class GameEngine: ObservableObject {
         addCoins(1_000)
     }
 
-    func defeatCurrentGhost() {
-        guard state.debug.isAdminMode, state.phase == .playing, state.ghost != nil else { return }
+    func defeatCurrentWave() {
+        guard state.debug.isAdminMode, state.phase == .playing, !state.enemies.isEmpty || state.enemiesRemainingToSpawn > 0 else { return }
         objectWillChange.send()
-        handleGhostDefeated()
+        state.enemies.removeAll()
+        state.enemiesRemainingToSpawn = 0
+        checkWaveCleared()
     }
 
     func drainEvents() -> [GameEvent] {
@@ -191,9 +202,10 @@ final class GameEngine: ObservableObject {
         return pending
     }
 
-    private func nextCost(level: Int, costs: [Int]) -> Int? {
-        let index = level - 1
-        return costs.indices.contains(index) ? costs[index] : nil
+    private var isWaitingForNextWave: Bool {
+        state.enemies.isEmpty
+            && state.enemiesRemainingToSpawn == 0
+            && state.intermissionRemaining > 0
     }
 
     private func canAfford(_ cost: Int?) -> Bool {
@@ -221,54 +233,129 @@ final class GameEngine: ObservableObject {
         state.coins = result.overflow ? config.maximumCoins : min(result.partialValue, config.maximumCoins)
     }
 
-    private func spawnCurrentWave() {
-        guard config.waves.indices.contains(state.waveIndex) else { return }
-        let wave = config.waves[state.waveIndex]
-        state.ghost = GhostState(
-            health: wave.health,
-            maxHealth: wave.health,
-            attackCooldown: wave.attackInterval
-        )
+    private func beginWave() {
+        let kinds = config.enemyKinds(level: state.level, wave: waveNumber)
+        state.waveKinds = kinds
+        state.enemies.removeAll()
+        state.enemiesRemainingToSpawn = kinds.count
+        state.spawnCooldown = 0
         state.intermissionRemaining = 0
-        events.append(.waveStarted(wave: state.waveIndex + 1))
+        events.append(.waveStarted(level: state.level, wave: waveNumber))
+        updateSpawning(dt: 0)
     }
 
-    private func damageGhost(_ damage: Int, slot: Int) {
-        guard var ghost = state.ghost else { return }
+    private func updateSpawning(dt: Double) {
+        guard state.enemiesRemainingToSpawn > 0 else { return }
+        state.spawnCooldown -= dt
+        var spawned = 0
+        while state.spawnCooldown <= 0, state.enemiesRemainingToSpawn > 0, spawned < 16 {
+            spawnEnemy()
+            spawned += 1
+        }
+    }
+
+    private func spawnEnemy() {
+        guard state.enemiesRemainingToSpawn > 0 else { return }
+        let index = state.waveKinds.count - state.enemiesRemainingToSpawn
+        guard state.waveKinds.indices.contains(index) else { return }
+        let kind = state.waveKinds[index]
+        state.enemiesRemainingToSpawn -= 1
+        state.spawnCooldown += config.enemySpawnInterval
+
+        let health = config.enemyHealth(kind: kind, level: state.level, wave: waveNumber)
+        let enemy = EnemyState(
+            id: state.nextEnemyID,
+            kind: kind,
+            health: health,
+            maxHealth: health,
+            attackCooldown: config.enemyAttackInterval(kind: kind, level: state.level, wave: waveNumber)
+        )
+        state.nextEnemyID += 1
+        state.enemies.append(enemy)
+    }
+
+    private func updateTurrets(dt: Double) {
+        for slot in state.turrets.indices {
+            guard var turret = state.turrets[slot] else { continue }
+            guard !state.enemies.isEmpty else {
+                turret.cooldown = max(0, turret.cooldown - dt)
+                state.turrets[slot] = turret
+                continue
+            }
+
+            turret.cooldown -= dt
+            var shots = 0
+            while turret.cooldown <= 0, !state.enemies.isEmpty, shots < 16 {
+                turret.cooldown += config.turretAttackInterval(kind: turret.kind, level: turret.level)
+                fire(slot: slot, damage: config.turretDamage(kind: turret.kind, level: turret.level, playerLevel: state.level))
+                shots += 1
+            }
+            state.turrets[slot] = turret
+        }
+    }
+
+    private func fire(slot: Int, damage: Int) {
+        guard !state.enemies.isEmpty else { return }
         events.append(.shot(slot: slot))
-        ghost.health = max(0, ghost.health - damage)
-        state.ghost = ghost
-        if ghost.health == 0 {
-            handleGhostDefeated()
-        }
-    }
-
-    private func handleGhostDefeated() {
-        guard state.ghost != nil else { return }
-        let defeatedWave = state.waveIndex
-        state.ghost = nil
-        addCoins(config.waves[defeatedWave].reward)
-        events.append(.ghostDefeated(wave: defeatedWave + 1))
-
-        if defeatedWave == config.waves.count - 1 {
-            state.phase = .won
-            state.intermissionRemaining = 0
-            events.append(.won)
+        var enemy = state.enemies[0]
+        enemy.health = max(0, enemy.health - damage)
+        if enemy.health == 0 {
+            state.enemies.removeFirst()
+            events.append(.enemyDefeated(kind: enemy.kind))
         } else {
-            state.waveIndex += 1
-            state.intermissionRemaining = config.intermissionDuration
+            state.enemies[0] = enemy
         }
     }
 
-    private func attackDoor() {
-        let wave = config.waves[state.waveIndex]
+    private func updateEnemyAttacks(dt: Double) {
+        guard state.phase == .playing, !state.enemies.isEmpty else { return }
+        var enemy = state.enemies[0]
+        enemy.attackCooldown -= dt
+        var attacks = 0
+        while enemy.attackCooldown <= 0, state.phase == .playing, attacks < 16 {
+            enemy.attackCooldown += config.enemyAttackInterval(kind: enemy.kind, level: state.level, wave: waveNumber)
+            applyDoorDamage(config.enemyDamage(kind: enemy.kind, level: state.level, wave: waveNumber))
+            attacks += 1
+        }
+        if !state.enemies.isEmpty {
+            state.enemies[0] = enemy
+        }
+    }
+
+    private func applyDoorDamage(_ damage: Int) {
         if !state.debug.invincibleDoor {
-            state.doorHealth = max(0, state.doorHealth - wave.damage)
+            state.doorHealth = max(0, state.doorHealth - damage)
         }
         events.append(.doorHit)
         if state.doorHealth == 0 {
             state.phase = .lost
             events.append(.lost)
+        }
+    }
+
+    private func checkWaveCleared() {
+        guard state.phase == .playing,
+              state.enemies.isEmpty,
+              state.enemiesRemainingToSpawn == 0,
+              state.intermissionRemaining == 0,
+              !state.waveKinds.isEmpty else { return }
+
+        let clearedLevel = state.level
+        let clearedWave = waveNumber
+        let reward = config.waveReward(level: clearedLevel, wave: clearedWave)
+        addCoins(reward)
+        events.append(.waveCleared(level: clearedLevel, wave: clearedWave, reward: reward))
+
+        if clearedWave >= config.wavesPerLevel {
+            state.level += 1
+            state.waveIndex = 0
+            let healed = state.doorHealth + doorMaxHealth / 4
+            state.doorHealth = min(doorMaxHealth, healed)
+            state.intermissionRemaining = config.levelUpDuration
+            events.append(.levelUp(state.level))
+        } else {
+            state.waveIndex += 1
+            state.intermissionRemaining = config.intermissionDuration
         }
     }
 }

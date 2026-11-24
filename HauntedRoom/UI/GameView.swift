@@ -19,10 +19,11 @@ struct GameView: View {
             Color(red: 0.025, green: 0.035, blue: 0.075)
                 .ignoresSafeArea()
 
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 header
                 stats
-                ghostStatus
+                waveStatus
+                equipmentBar
                 SpriteView(scene: scene)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 18))
@@ -32,11 +33,11 @@ struct GameView: View {
                 footer
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
 
             if engine.state.phase == .ready {
                 startOverlay
-            } else if engine.state.phase == .won || engine.state.phase == .lost {
+            } else if engine.state.phase == .lost {
                 resultOverlay
             }
         }
@@ -49,10 +50,10 @@ struct GameView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("守夜小屋")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: 23, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
-                Text("躺好发育，守住最后一道门")
-                    .font(.caption)
+                Text("无限关卡 · 第 \(engine.level) 关 · 第 \(engine.waveNumber)/\(engine.totalWavesPerLevel) 波")
+                    .font(.caption2)
                     .foregroundColor(.gray)
             }
             Spacer()
@@ -67,7 +68,13 @@ struct GameView: View {
     }
 
     private var stats: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
+            statCard(
+                title: "关卡",
+                value: "\(engine.level)",
+                icon: "flag.fill",
+                color: .mint
+            )
             statCard(
                 title: "金币",
                 value: engine.state.debug.infiniteCoins ? "∞" : "\(engine.state.coins)",
@@ -75,13 +82,13 @@ struct GameView: View {
                 color: .yellow
             )
             statCard(
-                title: "每秒收益",
+                title: "收益",
                 value: "+\(engine.incomePerSecond)",
                 icon: "bed.double.fill",
                 color: .green
             )
             statCard(
-                title: "房门耐久",
+                title: "房门",
                 value: "\(engine.state.doorHealth)",
                 icon: engine.state.debug.invincibleDoor ? "lock.shield.fill" : "shield.fill",
                 color: engine.state.debug.invincibleDoor ? .cyan : .orange
@@ -89,33 +96,59 @@ struct GameView: View {
         }
     }
 
-    private var ghostStatus: some View {
-        VStack(spacing: 5) {
-            if let ghost = engine.state.ghost {
-                HStack {
-                    Text("第 \(engine.waveNumber) 波猛鬼")
-                        .font(.caption.weight(.semibold))
-                    Spacer()
-                    Text("\(ghost.health) / \(ghost.maxHealth)")
-                        .font(.caption.monospacedDigit())
+    private var waveStatus: some View {
+        VStack(spacing: 4) {
+            HStack {
+                Text("第 \(engine.level) 关 · 第 \(engine.waveNumber)/\(engine.totalWavesPerLevel) 波")
+                    .font(.caption.weight(.semibold))
+                Spacer()
+                Text(waveStatusText)
+                    .font(.caption.monospacedDigit())
+            }
+            .foregroundColor(.white)
+
+            ProgressView(
+                value: Double(engine.waveEnemiesCleared),
+                total: Double(max(1, engine.waveEnemyTotal))
+            )
+            .tint(.red)
+
+            HStack(spacing: 10) {
+                ForEach(Array(engine.waveComposition.enumerated()), id: \.offset) { item in
+                    Text("\(item.element.kind.emoji)\(item.element.kind.displayName)×\(item.element.count)")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
                 }
-                .foregroundColor(.white)
-                ProgressView(value: Double(ghost.health), total: Double(ghost.maxHealth))
-                    .tint(.red)
-            } else {
-                Text(engine.state.phase == .playing ? "下一波正在赶来…" : "准备进入小屋")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity)
+                Spacer()
             }
         }
-        .frame(height: 36)
+        .frame(height: 54)
+    }
+
+    private var waveStatusText: String {
+        guard engine.state.phase == .playing else {
+            return engine.state.phase == .lost ? "房门已破" : ""
+        }
+        if engine.remainingEnemies > 0 {
+            return "剩余 \(engine.remainingEnemies) 只"
+        }
+        let seconds = max(0, Int(ceil(engine.state.intermissionRemaining)))
+        return "下一波 \(seconds) 秒"
+    }
+
+    private var equipmentBar: some View {
+        HStack(spacing: 6) {
+            equipmentChip("🛏 Lv.\(engine.state.bedLevel)/\(engine.maxBedLevel)")
+            equipmentChip("🚪 Lv.\(engine.state.doorLevel)/\(engine.maxDoorLevel)")
+            equipmentChip("⚔️ DPS \(engine.totalTurretDPS)")
+            Spacer(minLength: 0)
+        }
     }
 
     private var roomControls: some View {
         HStack(spacing: 10) {
             controlButton(
-                title: "升级床铺 · Lv.\(engine.state.bedLevel)",
+                title: "升级床铺 Lv.\(engine.state.bedLevel)/\(engine.maxBedLevel)",
                 subtitle: costText(engine.bedUpgradeCost),
                 icon: "bed.double.fill",
                 color: .blue,
@@ -123,7 +156,7 @@ struct GameView: View {
                 action: { engine.upgradeBed() }
             )
             controlButton(
-                title: "升级房门 · Lv.\(engine.state.doorLevel)",
+                title: "升级房门 Lv.\(engine.state.doorLevel)/\(engine.maxDoorLevel)",
                 subtitle: costText(engine.doorUpgradeCost),
                 icon: "shield.fill",
                 color: .orange,
@@ -134,13 +167,17 @@ struct GameView: View {
     }
 
     private var turretControls: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 7) {
             ForEach(engine.state.turrets.indices, id: \.self) { slot in
                 let turret = engine.state.turrets[slot]
+                let kind = engine.turretKind(at: slot) ?? .arrow
                 controlButton(
-                    title: turret == nil ? "建造炮台 \(slot + 1)" : "炮台 \(slot + 1) · Lv.\(turret!.level)",
+                    title: turret == nil
+                        ? "建造\(kind.displayName) \(slot + 1)"
+                        : "\(kind.displayName) \(slot + 1) · Lv.\(turret!.level)/\(engine.maxTurretLevel)",
                     subtitle: costText(engine.turretCost(at: slot)),
-                    icon: turret == nil ? "plus.circle.fill" : "bolt.circle.fill",
+                    icon: kind.emoji,
+                    isEmoji: true,
                     color: turret == nil ? .purple : .red,
                     disabled: turret == nil ? !engine.canBuildTurret(at: slot) : !engine.canUpgradeTurret(at: slot),
                     action: {
@@ -172,7 +209,7 @@ struct GameView: View {
     private var startOverlay: some View {
         overlayCard(
             title: "夜幕降临",
-            subtitle: "躺在床上持续获得金币，升级防御并击退 5 波猛鬼。",
+            subtitle: "躺床产金币，升级床铺、房门和四类炮塔。怪物一波比一波多，关卡无限，守住越久越好。",
             icon: "moon.stars.fill",
             buttonTitle: "躺下开始",
             buttonColor: .blue,
@@ -181,52 +218,67 @@ struct GameView: View {
     }
 
     private var resultOverlay: some View {
-        let won = engine.state.phase == .won
-        return overlayCard(
-            title: won ? "守夜成功" : "房门被攻破",
-            subtitle: won ? "所有猛鬼都被击退，小屋迎来了黎明。" : "调整发育和防御节奏，再守一次夜。",
-            icon: won ? "sun.max.fill" : "door.left.hand.open",
+        overlayCard(
+            title: "房门被攻破",
+            subtitle: "你守到了第 \(engine.level) 关 · 第 \(engine.waveNumber) 波。重新发育，再来一次。",
+            icon: "door.left.hand.open",
             buttonTitle: "再来一局",
-            buttonColor: won ? .green : .red,
+            buttonColor: .red,
             action: engine.restart
         )
     }
 
     private func statCard(title: String, value: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
             Label(title, systemImage: icon)
-                .font(.caption2)
+                .font(.system(size: 9))
                 .foregroundColor(.gray)
                 .lineLimit(1)
             Text(value)
-                .font(.system(size: 19, weight: .bold, design: .rounded))
+                .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundColor(color)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.65)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .background(Color.white.opacity(0.065))
-        .cornerRadius(12)
+        .cornerRadius(10)
+    }
+
+    private func equipmentChip(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundColor(.white.opacity(0.9))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.white.opacity(0.08))
+            .clipShape(Capsule())
     }
 
     private func controlButton(
         title: String,
         subtitle: String,
         icon: String,
+        isEmoji: Bool = false,
         color: Color,
         disabled: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             HStack(spacing: 7) {
-                Image(systemName: icon)
-                    .font(.headline)
+                if isEmoji {
+                    Text(icon)
+                        .font(.system(size: 16))
+                } else {
+                    Image(systemName: icon)
+                        .font(.headline)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.caption.weight(.semibold))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.75)
+                        .minimumScaleFactor(0.7)
                     Text(subtitle)
                         .font(.caption2)
                         .opacity(0.85)
@@ -234,8 +286,8 @@ struct GameView: View {
                 Spacer(minLength: 0)
             }
             .foregroundColor(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 9)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 8)
             .frame(maxWidth: .infinity)
             .background(color.opacity(disabled ? 0.18 : 0.62))
             .cornerRadius(11)
@@ -253,9 +305,9 @@ struct GameView: View {
     ) -> some View {
         ZStack {
             Color.black.opacity(0.78).ignoresSafeArea()
-            VStack(spacing: 18) {
+            VStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 56))
+                    .font(.system(size: 52))
                     .foregroundColor(buttonColor)
                 Text(title)
                     .font(.largeTitle.bold())
@@ -281,7 +333,7 @@ struct GameView: View {
                 }
                 .font(.caption2)
             }
-            .padding(28)
+            .padding(26)
             .frame(maxWidth: 340)
             .background(Color(red: 0.09, green: 0.11, blue: 0.18))
             .cornerRadius(24)
